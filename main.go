@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"sort"
 
-	// Using gorilla temporarily due to lack of time
 	"github.com/gorilla/mux"
 )
 
