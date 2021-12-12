@@ -1,7 +1,3 @@
-/*  No DB is used for this practice
-    gorilla/mux used for routing
-    Testing is done using Postman */
-    
 package main
 
 import (
@@ -10,11 +6,13 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sort"
 
+	// Using gorilla temporarily due to lack of time
 	"github.com/gorilla/mux"
 )
 
-// json tags are useful for unmarshalling request bodies
+// json tags are useful for unmarshalling of request bodies
 type randomInfoAboutMe struct {
 	Id      string `json:"Id"`
 	Title   string `json:"Title"`
@@ -24,6 +22,16 @@ type randomInfoAboutMe struct {
 
 // Entries populated in main, used as a simulation for DB
 var Entries []randomInfoAboutMe
+
+// alreadyExist checks if given Id is already in Entries
+func alreadyExist(Id string) bool {
+	for _, entry := range Entries {
+		if entry.Id == Id {
+			return true
+		}
+	}
+	return false
+}
 
 // homePage welcomes you as a sign of Turkish Hospitality
 func homePage(w http.ResponseWriter, r *http.Request) {
@@ -42,15 +50,21 @@ func returnSingleEntry(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(entry)
 		}
 	}
+
+	// If requested id is not found on the Entries
+	if !alreadyExist(key) {
+		fmt.Fprintf(w, "Requested Id is not found, please request a valid ID")
+	}
 }
 
-// returnAllEntries returns all entries, if there is any
+// returnAllEntries returns all entries
 func returnAllEntries(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Entries)
 }
 
 // createNewEntry handles POST request with a body by appending it to global sturctu Entries
 func createNewEntry(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("createNewEntry")
 	// Get the body of our POST request
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var newInfo randomInfoAboutMe
@@ -58,15 +72,28 @@ func createNewEntry(w http.ResponseWriter, r *http.Request) {
 	// JSON to randomInfoAboutMe(My Struct)
 	json.Unmarshal(reqBody, &newInfo)
 
+	// Checks request body's Id, if an entry with same ID exists, refuses to create
+	// By this way, deleting an Id wont throw an exception due to multiple Id's trying to be deleted at the same time.
+	if alreadyExist(newInfo.Id) {
+		fmt.Fprintf(w, "You cannot created a new entry that already exist, please use another id.\nYou can GET all and see which id's are already taken.")
+		return
+	}
+
 	// Update our global Entries array with newly added entry
 	Entries = append(Entries, newInfo)
 
 	// This line prints the body of the request it received to inform the client (double-checking)
 	json.NewEncoder(w).Encode(newInfo)
+
+	// Sorting Entries after each creation
+	sort.Slice(Entries[:], func(i, j int) bool {
+		return Entries[i].Id < Entries[j].Id
+	})
 }
 
 // updateEntry updates only the pointed(by id) struct with the given body information
 func updateEntry(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("updateEntry")
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	var updateInfo randomInfoAboutMe
 	json.Unmarshal(reqBody, &updateInfo)
@@ -81,8 +108,8 @@ func updateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for index, article := range Entries {
-		if article.Id == id {
+	for index, entry := range Entries {
+		if entry.Id == id {
 			Entries[index] = updateInfo
 		}
 	}
@@ -98,8 +125,8 @@ func deleteEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for index, article := range Entries {
-		if article.Id == id {
+	for index, entry := range Entries {
+		if entry.Id == id {
 			// Love doing this
 			Entries = append(Entries[:index], Entries[index+1:]...)
 		}
@@ -119,15 +146,15 @@ func handleRequests() {
 	// POST request (Crud)
 	dislikedRouter.HandleFunc("/entry", createNewEntry).Methods("POST")
 
-	// GET requests (cRud)
-	dislikedRouter.HandleFunc("/all", returnAllEntries)
-	dislikedRouter.HandleFunc("/entry/{id}", returnSingleEntry)
-
 	// UPDATE request (crUd)
 	dislikedRouter.HandleFunc("/entry/{id}", updateEntry).Methods("PUT")
 
 	// DELETE request (cruD)
 	dislikedRouter.HandleFunc("/entry/{id}", deleteEntry).Methods("DELETE")
+
+	// GET requests (cRud), careful moving returnSingleEntry to any id requested functions will disable those.
+	dislikedRouter.HandleFunc("/all", returnAllEntries)
+	dislikedRouter.HandleFunc("/entry/{id}", returnSingleEntry)
 
 	// If connection is down somehow, error will be displayed and os.Exit(1) will occur
 	log.Fatal(http.ListenAndServe(":10000", dislikedRouter))
@@ -136,7 +163,7 @@ func handleRequests() {
 func main() {
 	fmt.Println("Hey, your localhost is working. Cool!")
 
-	//Four sample randomInfoAboutMe is created
+	// Sample with 4 elements is created
 	Entries = []randomInfoAboutMe{
 		{Id: "1", Title: "From", Content: "Eskisehir", Desc: "Born and raised in it, had some rough winters but wolf never forgets."},
 		{Id: "2", Title: "Age", Content: "FeelingOld", Desc: "Nobody calls me young anymore, sadge."},
@@ -144,6 +171,6 @@ func main() {
 		{Id: "4", Title: "Football", Content: "Galatasaray", Desc: "GERCEKLERI TARIH YAZAR TARIHI DE GALATASARAY."},
 	}
 
-	//Handling request till connection breaks down
+	// Handling request till connection breaks down
 	handleRequests()
 }
