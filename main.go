@@ -107,6 +107,11 @@ func updateEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !alreadyExist(id) {
+		fmt.Fprintf(w, "You cannot update an entry which is not present.")
+		return
+	}
+
 	for index, entry := range Entries {
 		if entry.Id == id {
 			Entries[index] = updateInfo
@@ -121,6 +126,11 @@ func deleteEntry(w http.ResponseWriter, r *http.Request) {
 	// Perfection
 	if id == "4" {
 		fmt.Fprintf(w, "You cannot change Galatasaray, please do not attempt")
+		return
+	}
+
+	if !alreadyExist(id) {
+		fmt.Fprintf(w, "You cannot erase an entry which is not present.")
 		return
 	}
 
