@@ -1,5 +1,5 @@
 # Creating a basic RestFul API with Golang
-Entry level web server by using golang<br />
+Entry level web server by using golang, tests are done in Postman<br />
 
 V2_with_mux branch handles [1],[2],[3],[4],[5],[6]<br />
 V1_without_mux branch handles [1],[2],[5]
