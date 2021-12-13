@@ -1,4 +1,4 @@
-# webServerWithGo
+# Creating a basic RestFul API with Golang
 Entry level web server by using golang<br />
 
 V2_with_mux branch handles [1],[2],[3],[4],[5],[6]<br />
